@@ -124,6 +124,25 @@
   .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .filters select{font-size:15px;padding:9px}
   .btns{display:flex;gap:8px}
+  .btns button .ico{vertical-align:-3px;margin-right:4px}
+  .welcome{margin:8px 4px 14px}
+  .welcome .line{display:flex;align-items:center;gap:8px}
+  .welcome .line .sub{flex:1}
+  .fbtn{width:auto;margin:0;padding:6px 12px;border-radius:99px;background:transparent;color:var(--muted);border:1px solid var(--line);font-weight:500;font-size:13px;display:flex;align-items:center;gap:5px;white-space:nowrap}
+  .fbtn.on{color:var(--accent);border-color:var(--accent)}
+  .fhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .fclose{width:auto;margin:0;padding:4px 10px}
+  #fmodal{align-items:flex-end}
+  #fmodal .card{max-width:520px;border-radius:18px;margin-bottom:8px}
+  .welcome .hello{font-size:24px;font-weight:750;letter-spacing:-.01em}
+  .welcome .sub{color:var(--muted);font-size:15px}
+  .triplist li{cursor:pointer}
+  .triplist li > svg{flex-shrink:0}
+  .triplist .a{font-size:14px;line-height:1.35}
+  .triplist .go{color:var(--muted);font-size:22px;line-height:1}
+  .tripcard{padding:12px 0;border-top:1px solid var(--line)}
+  .tripcard:first-child{border-top:0;padding-top:0}
+  .tripcard h2{font-size:15px}
   .exprow{display:flex;align-items:center;gap:8px}
   .exprow b{flex:1}
   .exprow button{width:auto;margin:0;padding:9px 18px}
@@ -147,6 +166,11 @@
 </div>
 <datalist id="curlist"></datalist>
 
+<div class="modal" id="fmodal">
+  <div class="card"><div class="fhead"><h2 style="margin:0">Filtros</h2><button class="ghost fclose" data-act="fclose" aria-label="Fechar">✕</button></div>
+    <div id="fbody"></div>
+    <div class="btns"><button class="ghost" data-act="freset">Limpar</button><button data-act="fclose">Aplicar</button></div></div>
+</div>
 <div class="modal" id="modal">
   <div class="card">
     <h2 id="mTitle"></h2>
@@ -558,7 +582,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 </script>
 <script>
 (function(){
-  const APP_VERSION = "1.0.0";
+  const APP_VERSION = "1.2.0";
   const LS = "diarias-piloto-v2", LS_UI = "flight-wallet-ui", LS_OLD = "diaria-usd-ars-v1";
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -590,9 +614,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   const CHART = `<svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor"><rect x="3" y="12" width="4" height="9" rx="1.2"/><rect x="10" y="7" width="4" height="14" rx="1.2"/><rect x="17" y="3" width="4" height="18" rx="1.2"/></svg>`;
   const GEAR = `<svg class="ico" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>`;
   const PENCIL = `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
-  $("tabs").innerHTML = `<button data-act="tab" data-tab="nac">${FLAG}<span>Brasil</span></button>
+  $("tabs").innerHTML = `<button data-act="tab" data-tab="hist">${CHART}<span>Balanço</span></button>
+    <button data-act="tab" data-tab="nac">${FLAG}<span>Brasil</span></button>
     <button data-act="tab" data-tab="int">${GLOBE}<span>Exterior</span></button>
-    <button data-act="tab" data-tab="hist">${CHART}<span>Histórico</span></button>
     <button data-act="tab" data-tab="cfg" class="gear" aria-label="Configurações">${GEAR}</button>`;
   $("favicon").href = "data:image/svg+xml," + encodeURIComponent(LOGO.replace('aria-hidden="true"',''));
 
@@ -626,7 +650,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   // ---------- estado ----------
   function blank(){ return { v:3, settings:{ pd:{USD:200,GBP:200,EUR:200,BRL:250}, iof:3.5, theme:"auto", est:{} }, trips:[], updated:0 }; }
   let S = blank();
-  let UI = { tab:"nac", sel:{}, newTrip:{}, open:{pds:true, conv:false, resumo:false, cats:false, rate:true},
+  let UI = { tab:"hist", sel:{}, newTrip:{}, open:{pds:true, conv:false, resumo:false, cats:false, rate:true, filters:false, trips:false},
     f:{trip:"",kind:"",year:"",month:"",cur:"",open:false,detail:true}, ex:{trip:"",kind:"",year:"",month:"",cur:"",open:false,detail:true}, deduct:false };
   let ref = null, writing = Promise.resolve();
   const curTrip = () => S.trips.find(t => t.id === UI.sel[UI.tab]);
@@ -774,7 +798,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     if(!sel){
       h += `<section class="card" style="margin-top:8px"><h2>Nova viagem ${kind==="nac"?"no Brasil":"ao exterior"}</h2>
         <label for="nt-desc">Descrição</label>
-        <input id="nt-desc" placeholder="${kind==="nac"?"ex: Programação GRU–REC–GRU":"ex: Missão 001 – EZE/LHR"}" maxlength="80">
+        <input id="nt-desc" placeholder="${kind==="nac"?"ex: Missão 001 – GRU/REC":"ex: Missão 001 – EZE/LHR"}" maxlength="80">
         <button data-act="create" data-kind="${kind}">Criar viagem</button><div class="hint" id="nt-h"></div></section>`;
       const closed = S.trips.filter(t=>t.kind===kind && t.status==="closed").length;
       if(closed) h += `<p class="empty" style="text-align:center">${closed} viagem(ns) finalizada(s) no Histórico.</p>`;
@@ -804,7 +828,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     if(!nac && t.convs.length){
       const fin = tripFinal(t);
       h += `<div class="cardline">Na moeda da diária: ` + Object.keys(fin).sort(curOrder).map(c => { const s = fin[c].rec - fin[c].spent;
-        return `<span class="money" style="color:${s<-0.004?"var(--neg)":"var(--pos)"}">${s<-0.004?"faltando ":"sobrando "}${fm(Math.abs(s),c)}</span>`; }).join(" · ") + `</div>`;
+        return `<span class="money" style="color:${s<-0.004?"var(--neg)":"var(--pos)"}">${s<-0.004?"do bolso ":"saldo "}${fm(Math.abs(s),c)}</span>`; }).join(" · ") + `</div>`;
     }
     if(card.n){
       h += `<div class="cardline">💳 Cartão: ${nac ? amt(card.brl,"BRL") :
@@ -859,8 +883,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         const sum = pc.map(c => rt[c] ? `1 ${c} = ${fr(rt[c])}` : `${c} sem cotação`).join(" · ");
         h += section("rate", "Cotação em reais", sum, `
           <div class="row">${pc.map(c => `<div><label>${tag(c)} 1 ${c} = BRL</label><input data-rate="${c}" inputmode="decimal" placeholder="ex: 5,40" value="${rt[c]?fr(rt[c]):""}"></div>`).join("")}</div>
-          <p class="note">Cotação desta viagem, usada para calcular o resultado em reais no Balanço e nos relatórios.</p>
-          ${te.miss.length ? "" : `<div class="total"><span>Resultado da viagem em reais</span><b style="color:${te.v < -0.004 ? "var(--neg)" : "var(--pos)"}">${te.v < -0.004 ? "do bolso " : "sobrando "}${fm(Math.abs(te.v),"BRL")}</b></div>`}`, true);
+          <p class="note">Cotação desta viagem, usada para calcular o resultado estimado no Balanço e nos relatórios.</p>
+          ${te.miss.length ? "" : `<div class="total"><span>Resultado estimado</span><b style="color:${te.v < -0.004 ? "var(--neg)" : "var(--pos)"}">${te.v < -0.004 ? "do bolso " : "saldo "}${fm(Math.abs(te.v),"BRL")}</b></div>`}`, true);
       }
     }
     // Despesas
@@ -959,7 +983,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   // ---------- view: histórico ----------
   function filterBox(f, prefix, extra){
     const pool = S.trips.filter(t => f.open || t.status==="closed");
-    const years = new Set(), curs = new Set();
+    const years = new Set([today().slice(0,4)]), curs = new Set();
     pool.forEach(t => { const cvt = origConv(t);
       t.pds.forEach(p => { years.add(p.start.slice(0,4)); years.add(p.end.slice(0,4)); curs.add(p.cur); });
       t.exps.forEach(e => { years.add(e.date.slice(0,4)); curs.add(cvt(e.amount,e.cur).cur); }); });
@@ -1012,7 +1036,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       const cs = Object.keys(A.sec[k]).sort(curOrder); if(!cs.length) return;
       h += `<div class="subsec">${label}</div>`;
       cs.forEach(c => { const x = A.sec[k][c], s = x.rec - x.spent; pairs.push([s,c]); out += x.cardOutBrl;
-        h += `<div class="balrow"><div>${tag(c)} <span class="empty">${s < -0.004 ? "faltou (do bolso)" : "sobrou"}</span>
+        h += `<div class="balrow"><div>${tag(c)} <span class="empty">${s < -0.004 ? "do bolso" : "saldo"}</span>
           <div class="det">diárias ${fm(x.rec,c)} − gastos <span style="color:var(--neg)">${fm(x.spent,c)}</span></div></div>
           <div class="amt" style="font-size:22px;color:${saldoCol(s)}">${fm(Math.abs(s),c)}</div></div>`; });
     });
@@ -1020,18 +1044,36 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     if(out > 0.004) h += `<div class="cardline">💳 Cartão fora das diárias: <b style="color:var(--neg)">${fm(out,"BRL")}</b> <span class="empty">(sai do seu bolso)</span></div>`;
     const e = estimate(A);
     h += e.miss.length
-      ? `<p class="note">Para ver o resultado total em reais, informe a cotação BRL na aba da viagem: ${esc(e.miss.slice(0,4).join(", "))}${e.miss.length>4?"…":""}.</p>`
-      : `<div class="total"><span>Resultado em reais (estimativa)</span><b style="color:${saldoCol(e.v)}">${e.v < -0.004 ? "do bolso " : "sobrou "}${fm(Math.abs(e.v),"BRL")}</b></div>`;
+      ? `<p class="note">Para ver o resultado estimado, informe a cotação BRL na aba da viagem: ${esc(e.miss.slice(0,4).join(", "))}${e.miss.length>4?"…":""}.</p>`
+      : `<div class="total"><span>Resultado estimado</span><b style="color:${saldoCol(e.v)}">${e.v < -0.004 ? "do bolso " : "saldo "}${fm(Math.abs(e.v),"BRL")}</b></div>`;
     return h;
   }
 
   function viewHist(){
     const f = UI.f, A = aggregate(f);
-    let h = `<section class="card"><h2>Filtros</h2>${filterBox(f,"f")}</section>`;
-    if(!A.pool.length) return h + `<section class="card"><p class="empty" style="margin:0">Nenhuma viagem ${f.open?"":"finalizada "}ainda. Ao finalizar uma viagem ela aparece aqui.</p></section>`;
+    const hr = new Date().getHours(), greet = hr < 12 ? "Bom dia" : hr < 18 ? "Boa tarde" : "Boa noite";
     const blocks = [["nac",FLAG+" Brasil"],["int",GLOBE+" Exterior"]].filter(([k]) => !f.kind || f.kind===k);
-    const bal = balanceBlock(A, blocks);
-    if(bal) h += `<section class="card"><h2>Balanço</h2>${bal}</section>`;
+    const per = (f.month ? MESES[+f.month-1] + " de " : "") + (f.year || "todos os anos");
+    const yr = today().slice(0,4);
+    const active = f.trip || f.kind || f.cur || f.month || f.open || f.year !== yr;
+    const extra = [f.trip ? (S.trips.find(t=>t.id===f.trip)?.desc || "") : "", f.kind==="nac" ? "Brasil" : f.kind==="int" ? "Exterior" : "", f.cur].filter(Boolean).join(" · ");
+    let h = `<div class="welcome"><div class="hello">${greet}! ✈︎</div>
+      <div class="line"><div class="sub">Seu balanço de ${per}${extra ? " · " + esc(extra) : ""}</div><button class="fbtn ${active?"on":""}" data-act="fopen">${PENCIL} Filtros</button></div></div>`;
+
+    // balanço
+    const bal = A.pool.length ? balanceBlock(A, blocks) : "";
+    h += `<section class="card"><h2>Balanço</h2>${bal || `<p class="empty" style="margin:0">Nenhuma viagem finalizada em ${per}. Ao finalizar uma viagem, o balanço aparece aqui.</p>`}</section>`;
+
+    // viagens em andamento
+    const open = S.trips.filter(t => t.status === "open");
+    h += `<section class="card"><h2>Viagens em andamento</h2>` + (open.length
+      ? `<ul class="triplist">` + open.map(t => { const fin = tripFinal(t), p = period(t);
+          const sal = Object.keys(fin).sort(curOrder).map(c => { const v = fin[c].rec - fin[c].spent; return `<span class="money" style="color:${saldoCol(v)}">${fm(v,c)}</span>`; }).join("<br>") || `<span class="empty">sem diárias</span>`;
+          return `<li data-act="goto" data-id="${t.id}">${t.kind==="nac"?FLAG:GLOBE}<div class="t"><div class="d">${esc(t.desc)}</div><div class="m">${p ? fdy(p[0])+" a "+fdy(p[1]) : "sem datas"}</div></div><div class="a">${sal}</div><span class="go">›</span></li>`; }).join("") + `</ul>`
+      : `<p class="empty" style="margin:0">Nenhuma viagem em andamento.</p>
+         <div class="btns"><button class="ghost" data-act="startnew" data-kind="nac">${FLAG} Nova no Brasil</button><button class="ghost" data-act="startnew" data-kind="int">${GLOBE} Nova no exterior</button></div>`) + `</section>`;
+
+    if(!A.pool.length) return h;
 
     let body = "";
     blocks.forEach(([k,label]) => {
@@ -1043,25 +1085,26 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     body += `<p class="note">Valores na moeda da diária; gastos em moeda local convertidos pela taxa média da viagem. Gastos = dinheiro + cartão abatido. Categorias incluem todo gasto (dinheiro e cartão).${A.pend?` ${A.pend} despesa(s) no cartão sem valor em BRL.`:""}</p>`;
     h += section("resumo", "Resumo detalhado", "tabelas, meses e categorias", body, true);
 
-    h += `<h3 style="margin-left:4px">Viagens (${A.rows.length})</h3>`;
+    let cards = "";
     A.rows.forEach(({t, by, fin}) => {
       const per = period(t), cs = Object.keys(by).sort(curOrder);
       const line = (k) => cs.filter(c => by[c][k] > 0.004).map(c => k==="spent" ? red(by[c][k], c) : amt(by[c][k], c)).join(" · ") || "—";
       const card = cs.filter(c => by[c].cardOrig > 0.004).map(c => red(by[c].cardOrig,c) + (by[c].cardBrl && c!=="BRL" ? ` <span class="empty">(${fm(by[c].cardBrl,"BRL")})</span>` : "")).join(" · ");
       const saldo = Object.keys(fin).sort(curOrder).filter(c => !f.cur || c===f.cur).map(c => { const s = fin[c].rec - fin[c].spent;
         return `<span class="money" style="color:${saldoCol(s)}">${s < -0.004 ? "−" : "+"}${fm(Math.abs(s),c)}</span>`; }).join(" · ") || "—";
-      h += `<section class="card"><h2>${esc(t.desc)} <button class="edit" data-act="rename" data-id="${t.id}" aria-label="Renomear">${PENCIL}</button><span class="badge">${t.kind==="nac"?"Brasil":"Exterior"}</span>${t.status==="open"?'<span class="badge open">em andamento</span>':""}</h2>
+      cards += `<div class="tripcard"><h2>${esc(t.desc)} <button class="edit" data-act="rename" data-id="${t.id}" aria-label="Renomear">${PENCIL}</button><span class="badge">${t.kind==="nac"?"Brasil":"Exterior"}</span>${t.status==="open"?'<span class="badge open">em andamento</span>':""}</h2>
         <div class="period" style="margin-top:-6px;font-size:13px;color:var(--muted)">${per?fdy(per[0])+" a "+fdy(per[1]):"sem datas"}</div>
         <div class="kv"><span>Diárias${f.year||f.month?" (no período)":""}</span><span>${line("rec")}</span></div>
         <div class="kv"><span>Gastos</span><span>${line("spent")}</span></div>
         ${card ? `<div class="kv"><span>💳 Cartão</span><span>${card}</span></div>` : ""}
         <div class="kv" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span><b style="color:var(--ink)">Saldo final</b></span><span>${saldo}</span></div>
-        ${(() => { const te = tripEst(t); return te.miss.length || t.kind==="nac" ? "" : `<div class="kv"><span>Em reais</span><span class="money" style="color:${te.v<-0.004?"var(--neg)":"var(--pos)"}">${te.v<-0.004?"−":"+"}${fm(Math.abs(te.v),"BRL")}</span></div>`; })()}
+        ${(() => { const te = tripEst(t); return te.miss.length || t.kind==="nac" ? "" : `<div class="kv"><span>Resultado estimado</span><span class="money" style="color:${te.v<-0.004?"var(--neg)":"var(--pos)"}">${te.v<-0.004?"−":"+"}${fm(Math.abs(te.v),"BRL")}</span></div>`; })()}
         <div class="btns">${t.status==="open"
           ? `<button class="ghost" data-act="goto" data-id="${t.id}">Abrir</button>`
           : `<button class="ghost" data-act="reopen" data-id="${t.id}">Reabrir</button>`}
-          <button class="ghost" data-act="deltrip" data-id="${t.id}">Excluir</button></div></section>`;
+          <button class="ghost" data-act="deltrip" data-id="${t.id}">Excluir</button></div></div>`;
     });
+    h += section("trips", `Viagens no período`, `${A.rows.length} viagem(ns)`, cards || `<p class="empty">Nenhuma viagem.</p>`, true);
     h += `<section class="card" style="margin-top:16px"><div class="exprow"><b>Exportar seleção</b><button data-act="pdf">PDF</button><button data-act="xlsx">Excel</button></div>
       <label class="check"><input type="checkbox" data-f="detail" ${f.detail?"checked":""}> Incluir lista de despesas</label><div class="hint" id="exp-h"></div></section>`;
     return h;
@@ -1114,8 +1157,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     if(any){
       if(out > 0.004) rows.push({span:"Cartão fora das diárias (sai do bolso)", cur:"BRL", val:red(out,"BRL"), col:4});
       const e = estimate(A);
-      if(!e.miss.length) rows.push({span:"Resultado em reais (estimativa)", cur:"BRL", val:sal(e.v,"BRL"), col:5, strong:true});
-      else rows.push({span:"Resultado em reais: falta a cotação BRL em " + e.miss.join(", "), cur:"", val:null, col:5, strong:true});
+      if(!e.miss.length) rows.push({span:"Resultado estimado", cur:"BRL", val:sal(e.v,"BRL"), col:5, strong:true});
+      else rows.push({span:"Resultado estimado: falta a cotação BRL em " + e.miss.join(", "), cur:"", val:null, col:5, strong:true});
       T.push({title:"Balanço", cols:[{h:"Período",w:22},{h:"Descrição",w:18},{h:"Moeda",w:10},{h:"Diárias",w:17,r:1},{h:"Gastos",w:17,r:1},{h:"Saldo",w:17,r:1}], rows});
     }
     // Datas
@@ -1333,6 +1376,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     if(UI.tab==="int" || UI.tab==="nac"){ main.innerHTML = viewTrips(UI.tab); bindTrip(); }
     else if(UI.tab==="hist") main.innerHTML = viewHist();
     else main.innerHTML = viewCfg();
+    if($("fmodal").classList.contains("on")) $("fbody").innerHTML = filterBox(UI.f, "f");
     saveUI();
   }
 
@@ -1349,6 +1393,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   });
 
   document.addEventListener("click", async e => {
+    if(e.target.id === "fmodal"){ $("fmodal").classList.remove("on"); return; }
     const b = e.target.closest("[data-act]"); if(!b) return;
     const act = b.dataset.act, t = curTrip();
     switch(act){
@@ -1358,6 +1403,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         const v = await ask({title:"Nome da viagem", ok:"Salvar", input:tr.desc, text:true});
         if(v==null || !v.trim()) break; tr.desc = v.trim().slice(0,80); save(); render(); break;
       }
+      case "fopen": $("fbody").innerHTML = filterBox(UI.f, "f"); $("fmodal").classList.add("on"); break;
+      case "fclose": $("fmodal").classList.remove("on"); break;
+      case "freset": UI.f = {trip:"", kind:"", year:today().slice(0,4), month:"", cur:"", open:false, detail:UI.f.detail}; render(); break;
+      case "startnew": { const k = b.dataset.kind; UI.tab = k; UI.sel[k] = null; UI.newTrip[k] = true; render(); window.scrollTo(0,0); setTimeout(()=>$("nt-desc")?.focus(),50); break; }
       case "toggle": UI.open[b.dataset.sec] = !UI.open[b.dataset.sec]; render(); break;
       case "sel": UI.sel[UI.tab] = b.dataset.id; UI.newTrip[UI.tab] = false; render(); break;
       case "newtrip": UI.sel[UI.tab] = null; UI.newTrip[UI.tab] = true; render(); setTimeout(()=>$("nt-desc")?.focus(),50); break;
@@ -1502,7 +1551,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   try{ const l = JSON.parse(localStorage.getItem(LS)); if(l && Array.isArray(l.trips)) S = normalize(l); else { const m = migrateOld(); if(m){ S = m; saveLocal(); } } }catch(e){}
   try{ const u = JSON.parse(localStorage.getItem(LS_UI));
     if(u) UI = Object.assign(UI, u, {f:Object.assign(UI.f, u.f||{}), ex:Object.assign(UI.ex, u.ex||{}), open:Object.assign(UI.open, u.open||{})}); }catch(e){}
-  UI.open.resumo = false;
+  // ao abrir: tela de Balanço, filtros recolhidos e mostrando todo o ano atual
+  UI.tab = "hist"; UI.open.resumo = false; UI.open.trips = false;
+  UI.f = {trip:"", kind:"", year:today().slice(0,4), month:"", cur:"", open:false, detail: UI.f.detail !== false};
   applyTheme();
   render();
   if("serviceWorker" in navigator && /^https?:/.test(location.protocol) && !window.claude){
