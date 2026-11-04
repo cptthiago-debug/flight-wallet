@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f2a4a">
+<meta name="theme-color" content="#060a16">
 <title>Flight Wallet</title>
 <link rel="icon" id="favicon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -21,29 +21,41 @@
     --c-BRL:#b7860b; --c-USD:#2463b5; --c-EUR:#7048c8; --c-GBP:#c2417a; --c-X:#5f6f7a; --pos:#1d8046; --blue:#2463b5;
   }
   html[data-theme=dark]{
-    --bg:#111514; --card:#1b201e; --ink:#eef1ee; --muted:#9aa3a0; --line:#2c3331; --soft:#141917;
+    --bg:#070b16; --card:#111a2c; --ink:#eef2f8; --muted:#9aa7bd; --line:#24314a; --soft:#0b1222;
     --accent:#8cc4ff; --accent-ink:#0b1a2b; --neg:#ff8a78; --ok:#5fd08f;
     --c-BRL:#f2c94c; --c-USD:#6ea8ff; --c-EUR:#b29bff; --c-GBP:#f48fb1; --c-X:#a3b3bd; --pos:#5fd08f; --blue:#6ea8ff;
   }
   @media (prefers-color-scheme: dark){
     html:not([data-theme=light]){
-      --bg:#111514; --card:#1b201e; --ink:#eef1ee; --muted:#9aa3a0; --line:#2c3331; --soft:#141917;
+      --bg:#070b16; --card:#111a2c; --ink:#eef2f8; --muted:#9aa7bd; --line:#24314a; --soft:#0b1222;
       --accent:#8cc4ff; --accent-ink:#0b1a2b; --neg:#ff8a78; --ok:#5fd08f;
       --c-BRL:#f2c94c; --c-USD:#6ea8ff; --c-EUR:#b29bff; --c-GBP:#f48fb1; --c-X:#a3b3bd; --pos:#5fd08f; --blue:#6ea8ff;
     }
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  html{background:#04060d}
+  body{margin:0;min-height:100vh;background:transparent;color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  /* fundo "espaço": degradê azul-escuro → preto com brilhos suaves e estrelas discretas */
+  body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg fill='%23fff'%3E%3Ccircle cx='18' cy='32' r='.7' opacity='.55'/%3E%3Ccircle cx='96' cy='14' r='.5' opacity='.4'/%3E%3Ccircle cx='170' cy='58' r='.8' opacity='.5'/%3E%3Ccircle cx='222' cy='120' r='.5' opacity='.35'/%3E%3Ccircle cx='60' cy='110' r='.6' opacity='.3'/%3E%3Ccircle cx='132' cy='150' r='.9' opacity='.45'/%3E%3Ccircle cx='30' cy='196' r='.5' opacity='.4'/%3E%3Ccircle cx='190' cy='210' r='.6' opacity='.3'/%3E%3Ccircle cx='110' cy='228' r='.4' opacity='.35'/%3E%3C/g%3E%3C/svg%3E"),
+      radial-gradient(120% 70% at 15% -10%, rgba(46,96,190,.42), transparent 60%),
+      radial-gradient(90% 60% at 100% 105%, rgba(88,56,170,.28), transparent 65%),
+      linear-gradient(180deg, #0b1833 0%, #070d1d 45%, #03050b 100%);}
+  /* textos que ficam direto sobre o fundo escuro */
+  .brand, nav, .welcome, .triphead, .wrap > .status, #main > .status, #main > .empty{
+    --ink:#eef2f8; --muted:#a3b1c8; --line:rgba(255,255,255,.16); color:var(--ink)}
+  #main > button{box-shadow:0 0 0 1px rgba(255,255,255,.22)}
   .brand{max-width:560px;margin:0 auto;padding:14px 16px 4px;display:flex;align-items:center;gap:10px}
   .brand svg{width:34px;height:34px;flex-shrink:0}
   .brand b{font-size:19px;letter-spacing:-.01em}
   .brand b span{font-weight:400;color:var(--muted)}
-  nav{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;gap:4px;padding:8px 14px;max-width:560px;margin:0 auto;border-bottom:1px solid var(--line)}
+  nav{position:sticky;top:0;z-index:5;background:rgba(6,10,22,.72);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);display:flex;gap:4px;padding:8px 14px;max-width:560px;margin:0 auto;border-bottom:1px solid var(--line)}
   nav button{flex:1;margin:0;padding:8px 4px;background:transparent;color:var(--muted);border:1px solid transparent;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px}
   nav button.gear{flex:0 0 52px}
   nav .ico{flex-shrink:0}
   .subsec .ico{width:20px;height:20px}
-  nav button.on{background:var(--card);color:var(--ink);border-color:var(--line)}
+  nav button.on{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.2)}
   .wrap{max-width:560px;margin:0 auto;padding:10px 14px 40px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
   h2{font-size:16px;margin:0 0 10px}
@@ -600,7 +612,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 </script>
 <script>
 (function(){
-  const APP_VERSION = "1.3.0";
+  const APP_VERSION = "1.4.0";
   const LS = "diarias-piloto-v2", LS_UI = "flight-wallet-ui", LS_OLD = "diaria-usd-ars-v1";
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
