@@ -133,6 +133,14 @@
   .fhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .fclose{width:auto;margin:0;padding:4px 10px}
   #fmodal{align-items:flex-end}
+  details.est{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  details.est summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  details.est summary::-webkit-details-marker{display:none}
+  details.est summary::after{content:"Ver ▾";font-size:12px;color:var(--muted)}
+  details.est[open] summary::after{content:"Ocultar ▴"}
+  details.est b{display:block;text-align:right;font-size:15px;margin-top:4px}
+  #dlmodal .card{max-width:420px}
+  #dlmodal button{width:100%;margin-top:8px}
   #fmodal .card{max-width:520px;border-radius:18px;margin-bottom:8px}
   .welcome .hello{font-size:24px;font-weight:750;letter-spacing:-.01em}
   .welcome .sub{color:var(--muted);font-size:15px}
@@ -170,6 +178,16 @@
   <div class="card"><div class="fhead"><h2 style="margin:0">Filtros</h2><button class="ghost fclose" data-act="fclose" aria-label="Fechar">✕</button></div>
     <div id="fbody"></div>
     <div class="btns"><button class="ghost" data-act="freset">Limpar</button><button data-act="fclose">Aplicar</button></div></div>
+</div>
+<div class="modal" id="dlmodal">
+  <div class="card">
+    <h2>Arquivo pronto</h2>
+    <p id="dlName" style="word-break:break-all"></p>
+    <button id="dlSave">Baixar</button>
+    <button class="ghost" id="dlShare">Compartilhar / salvar em…</button>
+    <button class="ghost" id="dlOpen">Abrir</button>
+    <button class="ghost" id="dlNo">Cancelar</button>
+  </div>
 </div>
 <div class="modal" id="modal">
   <div class="card">
@@ -582,7 +600,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 </script>
 <script>
 (function(){
-  const APP_VERSION = "1.2.0";
+  const APP_VERSION = "1.3.0";
   const LS = "diarias-piloto-v2", LS_UI = "flight-wallet-ui", LS_OLD = "diaria-usd-ars-v1";
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -778,6 +796,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     const h = $(id); if(!h) return; h.textContent = msg; h.classList.toggle("err", !!err);
     clearTimeout(h._t); h._t = setTimeout(()=>{ h.textContent=""; h.classList.remove("err"); }, 3500);
   }
+  function estLine(v){
+    return `<details class="est"><summary>Resultado estimado</summary><b style="color:${saldoCol(v)}">${v < -0.004 ? "do bolso " : "saldo "}${fm(Math.abs(v),"BRL")}</b></details>`;
+  }
   function section(key, title, summary, body, collapsible){
     const open = !collapsible || UI.open[key];
     const head = collapsible
@@ -884,7 +905,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         h += section("rate", "Cotação em reais", sum, `
           <div class="row">${pc.map(c => `<div><label>${tag(c)} 1 ${c} = BRL</label><input data-rate="${c}" inputmode="decimal" placeholder="ex: 5,40" value="${rt[c]?fr(rt[c]):""}"></div>`).join("")}</div>
           <p class="note">Cotação desta viagem, usada para calcular o resultado estimado no Balanço e nos relatórios.</p>
-          ${te.miss.length ? "" : `<div class="total"><span>Resultado estimado</span><b style="color:${te.v < -0.004 ? "var(--neg)" : "var(--pos)"}">${te.v < -0.004 ? "do bolso " : "saldo "}${fm(Math.abs(te.v),"BRL")}</b></div>`}`, true);
+          ${te.miss.length ? "" : estLine(te.v)}`, true);
       }
     }
     // Despesas
@@ -1045,7 +1066,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     const e = estimate(A);
     h += e.miss.length
       ? `<p class="note">Para ver o resultado estimado, informe a cotação BRL na aba da viagem: ${esc(e.miss.slice(0,4).join(", "))}${e.miss.length>4?"…":""}.</p>`
-      : `<div class="total"><span>Resultado estimado</span><b style="color:${saldoCol(e.v)}">${e.v < -0.004 ? "do bolso " : "saldo "}${fm(Math.abs(e.v),"BRL")}</b></div>`;
+      : estLine(e.v);
     return h;
   }
 
@@ -1083,7 +1104,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       if(Object.keys(A.cats[k]).length) body += `<h3>Gastos por categoria</h3>` + catTable(A.cats[k]);
     });
     body += `<p class="note">Valores na moeda da diária; gastos em moeda local convertidos pela taxa média da viagem. Gastos = dinheiro + cartão abatido. Categorias incluem todo gasto (dinheiro e cartão).${A.pend?` ${A.pend} despesa(s) no cartão sem valor em BRL.`:""}</p>`;
-    h += section("resumo", "Resumo detalhado", "tabelas, meses e categorias", body, true);
 
     let cards = "";
     A.rows.forEach(({t, by, fin}) => {
@@ -1098,13 +1118,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         <div class="kv"><span>Gastos</span><span>${line("spent")}</span></div>
         ${card ? `<div class="kv"><span>💳 Cartão</span><span>${card}</span></div>` : ""}
         <div class="kv" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span><b style="color:var(--ink)">Saldo final</b></span><span>${saldo}</span></div>
-        ${(() => { const te = tripEst(t); return te.miss.length || t.kind==="nac" ? "" : `<div class="kv"><span>Resultado estimado</span><span class="money" style="color:${te.v<-0.004?"var(--neg)":"var(--pos)"}">${te.v<-0.004?"−":"+"}${fm(Math.abs(te.v),"BRL")}</span></div>`; })()}
+        ${(() => { const te = tripEst(t); return te.miss.length || t.kind==="nac" ? "" : estLine(te.v); })()}
         <div class="btns">${t.status==="open"
           ? `<button class="ghost" data-act="goto" data-id="${t.id}">Abrir</button>`
           : `<button class="ghost" data-act="reopen" data-id="${t.id}">Reabrir</button>`}
           <button class="ghost" data-act="deltrip" data-id="${t.id}">Excluir</button></div></div>`;
     });
     h += section("trips", `Viagens no período`, `${A.rows.length} viagem(ns)`, cards || `<p class="empty">Nenhuma viagem.</p>`, true);
+    h += section("resumo", "Resumo detalhado", "tabelas, meses e categorias", body, true);
     h += `<section class="card" style="margin-top:16px"><div class="exprow"><b>Exportar seleção</b><button data-act="pdf">PDF</button><button data-act="xlsx">Excel</button></div>
       <label class="check"><input type="checkbox" data-f="detail" ${f.detail?"checked":""}> Incluir lista de despesas</label><div class="hint" id="exp-h"></div></section>`;
     return h;
@@ -1210,22 +1231,37 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace('aria-hidden="true"','width="'+size+'" height="'+size+'"'));
     });
   }
+  function dlAnchor(name, blob){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = name; a.rel = "noopener"; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+  }
+  // No celular (fora do Claude) o arquivo é oferecido numa janela: o toque em "Baixar"/"Compartilhar"
+  // é um gesto novo do usuário, que Android e iPhone exigem para baixar ou compartilhar.
+  function offerFile(name, blob){
+    return new Promise(res => {
+      const file = new File([blob], name, {type: blob.type || "application/octet-stream"});
+      const canShare = !!(navigator.canShare && (()=>{ try{ return navigator.canShare({files:[file]}); }catch(_){ return false; } })());
+      $("dlName").textContent = name;
+      $("dlShare").style.display = canShare ? "" : "none";
+      $("dlmodal").classList.add("on");
+      const done = v => { $("dlmodal").classList.remove("on"); $("dlSave").onclick = $("dlShare").onclick = $("dlOpen").onclick = $("dlNo").onclick = null; res(v); };
+      $("dlSave").onclick = () => { dlAnchor(name, blob); done("ok"); };
+      $("dlShare").onclick = async () => { try{ await navigator.share({files:[file], title:name}); done("ok"); }catch(e){ if(e && e.name === "AbortError") return; dlAnchor(name, blob); done("ok"); } };
+      $("dlOpen").onclick = () => { const url = URL.createObjectURL(blob); window.open(url, "_blank") || (location.href = url); setTimeout(() => URL.revokeObjectURL(url), 300000); done("ok"); };
+      $("dlNo").onclick = () => done("declined");
+    });
+  }
   async function saveFile(name, blob){
-    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if(iOS && !window.claude && navigator.canShare){
-      try{ const file = new File([blob], name, {type: blob.type || "application/octet-stream"});
-        if(navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:name}); return "ok"; } }
-      catch(e){ if(e && e.name === "AbortError") return "declined"; }
-    }
+    const mobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if(mobile && !window.claude) return offerFile(name, blob);
     try{
       if(window.claude && claude.use){
         const dl = await claude.use("downloads");
         if(dl){ await dl.save({filename:name, data:blob}); return "ok"; }
       }
     }catch(e){ if(e && e.code === "declined") return "declined"; }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    dlAnchor(name, blob);
     return "ok";
   }
   async function makePdf(f){
@@ -1367,6 +1403,25 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     return {blob: zipStore(files), name: R.fname + ".xlsx"};
   }
 
+  // ---------- navegação (botão/gesto voltar do celular) ----------
+  function go(tab){
+    if(tab !== UI.tab && !window.claude){ try{ history.pushState({fw:1, tab}, ""); }catch(_){} }
+    UI.tab = tab; render(); window.scrollTo(0,0);
+  }
+  window.addEventListener("popstate", e => {
+    // fecha janelas abertas antes de trocar de aba
+    $("fmodal").classList.remove("on");
+    if($("dlmodal").classList.contains("on")) $("dlNo").click();
+    if($("modal").classList.contains("on")) $("mNo").click();
+    const st = e.state || {};
+    if(st.root || !st.fw){
+      // chegou ao início do histórico: não deixa o app sair para uma tela preta
+      try{ history.pushState({fw:1, tab:"hist"}, ""); }catch(_){}
+      UI.tab = "hist";
+    } else UI.tab = st.tab || "hist";
+    render(); window.scrollTo(0,0);
+  });
+
   // ---------- render ----------
   function render(){
     document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === UI.tab));
@@ -1397,7 +1452,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     const b = e.target.closest("[data-act]"); if(!b) return;
     const act = b.dataset.act, t = curTrip();
     switch(act){
-      case "tab": UI.tab = b.dataset.tab; render(); window.scrollTo(0,0); break;
+      case "tab": go(b.dataset.tab); break;
       case "rename": {
         const tr = S.trips.find(x=>x.id===b.dataset.id); if(!tr) break;
         const v = await ask({title:"Nome da viagem", ok:"Salvar", input:tr.desc, text:true});
@@ -1406,7 +1461,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       case "fopen": $("fbody").innerHTML = filterBox(UI.f, "f"); $("fmodal").classList.add("on"); break;
       case "fclose": $("fmodal").classList.remove("on"); break;
       case "freset": UI.f = {trip:"", kind:"", year:today().slice(0,4), month:"", cur:"", open:false, detail:UI.f.detail}; render(); break;
-      case "startnew": { const k = b.dataset.kind; UI.tab = k; UI.sel[k] = null; UI.newTrip[k] = true; render(); window.scrollTo(0,0); setTimeout(()=>$("nt-desc")?.focus(),50); break; }
+      case "startnew": { const k = b.dataset.kind; UI.sel[k] = null; UI.newTrip[k] = true; go(k); setTimeout(()=>$("nt-desc")?.focus(),50); break; }
       case "toggle": UI.open[b.dataset.sec] = !UI.open[b.dataset.sec]; render(); break;
       case "sel": UI.sel[UI.tab] = b.dataset.id; UI.newTrip[UI.tab] = false; render(); break;
       case "newtrip": UI.sel[UI.tab] = null; UI.newTrip[UI.tab] = true; render(); setTimeout(()=>$("nt-desc")?.focus(),50); break;
@@ -1460,13 +1515,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         t[b.dataset.type] = t[b.dataset.type].filter(x => x.id !== b.dataset.id); save(); render(); break;
       }
       case "close": {
-        const ok = await ask({title:"Finalizar viagem?", msg:`"${t.desc}" vai para o Histórico. Você pode reabrir depois, se precisar.`, ok:"Finalizar"});
-        if(!ok) break; t.status = "closed"; t.closedAt = today(); UI.sel[UI.tab] = null; save(); render(); break;
+        const ok = await ask({title:"Finalizar viagem?", msg:`"${t.desc}" vai para o Balanço. Você pode reabrir depois, se precisar.`, ok:"Finalizar"});
+        if(!ok) break; t.status = "closed"; t.closedAt = today(); UI.sel[UI.tab] = null; save(); go("hist"); break;
       }
       case "reopen": {
-        const tr = S.trips.find(x=>x.id===b.dataset.id); tr.status = "open"; UI.tab = tr.kind; UI.sel[tr.kind] = tr.id; UI.newTrip[tr.kind]=false; save(); render(); window.scrollTo(0,0); break;
+        const tr = S.trips.find(x=>x.id===b.dataset.id); tr.status = "open"; UI.sel[tr.kind] = tr.id; UI.newTrip[tr.kind]=false; save(); go(tr.kind); break;
       }
-      case "goto": { const tr = S.trips.find(x=>x.id===b.dataset.id); UI.tab = tr.kind; UI.sel[tr.kind] = tr.id; UI.newTrip[tr.kind]=false; render(); window.scrollTo(0,0); break; }
+      case "goto": { const tr = S.trips.find(x=>x.id===b.dataset.id); UI.sel[tr.kind] = tr.id; UI.newTrip[tr.kind]=false; go(tr.kind); break; }
       case "deltrip": {
         const tr = S.trips.find(x=>x.id===b.dataset.id);
         const ok = await ask({title:"Excluir viagem?", msg:`"${tr.desc}" e todos os lançamentos dela serão apagados. Isso não pode ser desfeito.`, ok:"Excluir", danger:true});
@@ -1555,6 +1610,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   UI.tab = "hist"; UI.open.resumo = false; UI.open.trips = false;
   UI.f = {trip:"", kind:"", year:today().slice(0,4), month:"", cur:"", open:false, detail: UI.f.detail !== false};
   applyTheme();
+  if(!window.claude) try{ history.replaceState({fw:1, root:true, tab:"hist"}, ""); history.pushState({fw:1, tab:"hist"}, ""); }catch(_){}
   render();
   if("serviceWorker" in navigator && /^https?:/.test(location.protocol) && !window.claude){
     navigator.serviceWorker.register("sw.js").catch(()=>{});
