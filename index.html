@@ -175,6 +175,12 @@
   .modal.on{display:flex}
   .modal .card{max-width:380px;width:100%}
   .modal p{margin:0 0 6px;color:var(--muted);font-size:14px}
+  .tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .tools button{width:auto;margin:0;padding:6px 11px;font-size:13px;border-radius:999px}
+  #tsheet .card{max-height:88vh;overflow-y:auto;margin:0}
+  #tsheet .shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  #tsheet .shead h2{margin:0}
+  #tsheet .shead button{width:auto;margin:0;padding:4px 10px;font-size:18px;line-height:1}
 </style>
 </head>
 <body>
@@ -612,7 +618,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 </script>
 <script>
 (function(){
-  const APP_VERSION = "1.4.0";
+  const APP_VERSION = "1.5.0";
   const LS = "diarias-piloto-v2", LS_UI = "flight-wallet-ui", LS_OLD = "diaria-usd-ars-v1";
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -681,7 +687,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   function blank(){ return { v:3, settings:{ pd:{USD:200,GBP:200,EUR:200,BRL:250}, iof:3.5, theme:"auto", est:{} }, trips:[], updated:0 }; }
   let S = blank();
   let UI = { tab:"hist", sel:{}, newTrip:{}, open:{pds:true, conv:false, resumo:false, cats:false, rate:true, filters:false, trips:false},
-    f:{trip:"",kind:"",year:"",month:"",cur:"",open:false,detail:true}, ex:{trip:"",kind:"",year:"",month:"",cur:"",open:false,detail:true}, deduct:false };
+    f:{trip:"",kind:"",year:"",month:"",cur:"",open:false,detail:true}, ex:{trip:"",kind:"",year:"",month:"",cur:"",open:false,detail:true}, deduct:false, sheet:null };
   let ref = null, writing = Promise.resolve();
   const curTrip = () => S.trips.find(t => t.id === UI.sel[UI.tab]);
   const deducts = e => e.pay !== "card" || !!e.deduct;
@@ -876,14 +882,21 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     const pdCur = nac ? "BRL" : (lastPd ? lastPd.cur : "USD");
     const pdTot = {}; let nDays = 0; t.pds.forEach(p => { pdTot[p.cur] = (pdTot[p.cur]||0) + p.days*p.perDay; nDays += p.days; });
     const pdSum = nDays ? `${nDays} diária${nDays>1?"s":""} · ` + Object.keys(pdTot).map(c=>fm(pdTot[c],c)).join(" · ") : "nenhuma";
-    h += section("pds", "Diárias", pdSum, `<ul>` +
+    const pdList = `<ul>` +
       (t.pds.length ? t.pds.map(p => `<li><div class="t"><div class="d">${fd(p.start)} a ${fd(p.end)}</div>
         <div class="m">${p.days} × ${fm(p.perDay,p.cur)}</div></div>
         <div class="a">${amt(p.days*p.perDay,p.cur)}</div>
         <button class="x" data-act="del" data-type="pds" data-id="${p.id}">✕</button></li>`).join("")
-        : `<li class="empty">Nenhuma diária lançada.</li>`) + `</ul>
-      <h3>Adicionar diárias</h3>
-      <div class="row"><div><label for="pd-start">De</label><input type="date" id="pd-start" value="${pdStart}"></div>
+        : `<li class="empty">Nenhuma diária lançada.</li>`) + `</ul>`;
+    const tools = `<div class="tools"><button class="ghost" data-act="sheet" data-s="pd">＋ Diárias</button>` +
+      (nac ? "" : `<button class="ghost" data-act="sheet" data-s="conv">⇄ Converter</button>`) +
+      (!nac && [...new Set(t.pds.map(p => p.cur))].some(c => c !== "BRL") ? `<button class="ghost" data-act="sheet" data-s="rate">Cotação</button>` : "") + `</div>`;
+    h += section("pds", "Diárias", pdSum, pdList + tools, true);
+
+    // Janelas discretas: adicionar diárias, converter, cotação
+    let sheet = "";
+    if(UI.sheet === "pd"){
+      sheet = ["Adicionar diárias", `      <div class="row"><div><label for="pd-start">De</label><input type="date" id="pd-start" value="${pdStart}"></div>
         <div><label for="pd-end">Até</label><input type="date" id="pd-end" value="${pdStart}"></div></div>
       <div class="row">
         ${nac ? "" : `<div><label for="pd-cur">Moeda</label><select id="pd-cur">${PD_CURS.map(c=>`<option ${c===pdCur?"selected":""}>${c}</option>`).join("")}</select></div>`}
@@ -891,35 +904,27 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         <div><label for="pd-val">Valor/dia</label><input id="pd-val" inputmode="decimal" value="${fr(S.settings.pd[pdCur]||0)}"></div>
       </div>
       <div class="hint" id="pd-h"></div>
-      <button data-act="addpd">Adicionar diárias</button>`, true);
-
-    // Converter
-    if(!nac){
+      <button data-act="addpd">Adicionar diárias</button>`];
+    } else if(UI.sheet === "conv" && !nac){
       const lastConv = t.convs[t.convs.length-1];
       const fromOpts = curs.length ? curs : ["USD"];
-      const cvSum = t.convs.length ? `${t.convs.length} conversão(ões) · últ. taxa ${fr(lastConv.rate)}` : "nenhuma";
-      h += section("conv", "Converter", cvSum, `
+      sheet = ["Converter", `
         <div class="row"><div><label for="cv-from">De</label><select id="cv-from">${fromOpts.map(c=>`<option ${lastConv&&lastConv.from===c?"selected":""}>${c}</option>`).join("")}</select></div>
           <div><label for="cv-amt">Valor</label><input id="cv-amt" inputmode="decimal" placeholder="ex: 100"></div></div>
         <div class="row"><div><label for="cv-to">Para</label><input id="cv-to" list="curlist" value="${lastConv?lastConv.to:""}" placeholder="ex: ARS" maxlength="3" style="text-transform:uppercase"></div>
           <div><label for="cv-rate" id="cv-rate-l">Taxa</label><input id="cv-rate" inputmode="decimal" value="${lastConv?fr(lastConv.rate):""}" placeholder="ex: 1450"></div></div>
         <label for="cv-date">Data</label><input type="date" id="cv-date" value="${today()}">
         <div class="hint" id="cv-h"></div>
-        <button data-act="addconv">Registrar conversão</button>`, true);
-    }
-
-    // Cotação em reais
-    if(!nac){
+        <button data-act="addconv">Registrar conversão</button>`];
+    } else if(UI.sheet === "rate" && !nac){
       const pc = [...new Set(t.pds.map(p => p.cur))].filter(c => c !== "BRL");
-      if(pc.length){
-        const rt = t.brl || {}, te = tripEst(t);
-        const sum = pc.map(c => rt[c] ? `1 ${c} = ${fr(rt[c])}` : `${c} sem cotação`).join(" · ");
-        h += section("rate", "Cotação em reais", sum, `
+      const rt = t.brl || {}, te = tripEst(t);
+      sheet = ["Cotação em reais", `
           <div class="row">${pc.map(c => `<div><label>${tag(c)} 1 ${c} = BRL</label><input data-rate="${c}" inputmode="decimal" placeholder="ex: 5,40" value="${rt[c]?fr(rt[c]):""}"></div>`).join("")}</div>
           <p class="note">Cotação desta viagem, usada para calcular o resultado estimado no Balanço e nos relatórios.</p>
-          ${te.miss.length ? "" : estLine(te.v)}`, true);
-      }
+          ${te.miss.length ? "" : estLine(te.v)}`];
     }
+
     // Despesas
     const lastExp = t.exps[t.exps.length-1];
     const exCur = nac ? "BRL" : (t.lastCur || UI.lastExpCur || (lastExp ? lastExp.cur : (t.convs.length ? t.convs[t.convs.length-1].to : (curs[0]||"USD"))));
@@ -968,6 +973,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       : `<li class="empty">Nenhuma despesa ou conversão ainda.</li>`) + `</ul>`, false);
     h += `<button data-act="close">Finalizar viagem</button>
       <button class="ghost" data-act="deltrip" data-id="${t.id}">Excluir viagem</button>`;
+    if(sheet) h += `<div class="modal on" id="tsheet"><div class="card"><div class="shead"><h2>${sheet[0]}</h2>
+      <button class="ghost" data-act="sheet" data-s="" aria-label="Fechar">✕</button></div>${sheet[1]}</div></div>`;
     return h;
   }
 
@@ -1416,7 +1423,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   }
 
   // ---------- navegação (botão/gesto voltar do celular) ----------
-  function go(tab){
+  function go(tab){ UI.sheet = null;
     if(tab !== UI.tab && !window.claude){ try{ history.pushState({fw:1, tab}, ""); }catch(_){} }
     UI.tab = tab; render(); window.scrollTo(0,0);
   }
@@ -1461,6 +1468,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
   document.addEventListener("click", async e => {
     if(e.target.id === "fmodal"){ $("fmodal").classList.remove("on"); return; }
+    if(e.target.id === "tsheet"){ UI.sheet = null; render(); return; }
     const b = e.target.closest("[data-act]"); if(!b) return;
     const act = b.dataset.act, t = curTrip();
     switch(act){
@@ -1474,8 +1482,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       case "fclose": $("fmodal").classList.remove("on"); break;
       case "freset": UI.f = {trip:"", kind:"", year:today().slice(0,4), month:"", cur:"", open:false, detail:UI.f.detail}; render(); break;
       case "startnew": { const k = b.dataset.kind; UI.sel[k] = null; UI.newTrip[k] = true; go(k); setTimeout(()=>$("nt-desc")?.focus(),50); break; }
+      case "sheet": UI.sheet = b.dataset.s || null; render(); break;
       case "toggle": UI.open[b.dataset.sec] = !UI.open[b.dataset.sec]; render(); break;
-      case "sel": UI.sel[UI.tab] = b.dataset.id; UI.newTrip[UI.tab] = false; render(); break;
+      case "sel": UI.sheet = null; UI.sel[UI.tab] = b.dataset.id; UI.newTrip[UI.tab] = false; render(); break;
       case "newtrip": UI.sel[UI.tab] = null; UI.newTrip[UI.tab] = true; render(); setTimeout(()=>$("nt-desc")?.focus(),50); break;
       case "create": {
         const d = $("nt-desc").value.trim(); if(!d) return flash("nt-h","Dê um nome para a viagem",true);
@@ -1489,7 +1498,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         if(!(days>0)) return flash("pd-h","Informe o número de diárias",true);
         if(!(per>0)) return flash("pd-h","Informe o valor da diária",true);
         t.pds.push({id:uid(), start, end:addDays(start,days-1), days, cur, perDay:per, ts:Date.now()});
-        t.pds.sort((a,b)=>a.start.localeCompare(b.start)); save(); render(); break;
+        t.pds.sort((a,b)=>a.start.localeCompare(b.start)); UI.sheet = null; save(); render(); break;
       }
       case "addconv": {
         const from = $("cv-from").value, to = $("cv-to").value.trim().toUpperCase();
@@ -1497,7 +1506,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         if(!/^[A-Z]{3}$/.test(to)) return flash("cv-h","Informe a moeda de destino (ex: ARS)",true);
         if(to===from) return flash("cv-h","Escolha moedas diferentes",true);
         if(!(amount>0) || !(rate>0)) return flash("cv-h","Informe o valor e a taxa",true);
-        t.convs.push({id:uid(), date:$("cv-date").value||today(), from, to, amount, rate, ts:Date.now()}); save(); render(); break;
+        t.convs.push({id:uid(), date:$("cv-date").value||today(), from, to, amount, rate, ts:Date.now()}); UI.sheet = null; save(); render(); break;
       }
       case "addexp": {
         const nac = t.kind==="nac";
@@ -1617,7 +1626,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
   try{ const l = JSON.parse(localStorage.getItem(LS)); if(l && Array.isArray(l.trips)) S = normalize(l); else { const m = migrateOld(); if(m){ S = m; saveLocal(); } } }catch(e){}
   try{ const u = JSON.parse(localStorage.getItem(LS_UI));
-    if(u) UI = Object.assign(UI, u, {f:Object.assign(UI.f, u.f||{}), ex:Object.assign(UI.ex, u.ex||{}), open:Object.assign(UI.open, u.open||{})}); }catch(e){}
+    if(u) UI = Object.assign(UI, u, {f:Object.assign(UI.f, u.f||{}), ex:Object.assign(UI.ex, u.ex||{}), open:Object.assign(UI.open, u.open||{})}); UI.sheet = null; }catch(e){}
   // ao abrir: tela de Balanço, filtros recolhidos e mostrando todo o ano atual
   UI.tab = "hist"; UI.open.resumo = false; UI.open.trips = false;
   UI.f = {trip:"", kind:"", year:today().slice(0,4), month:"", cur:"", open:false, detail: UI.f.detail !== false};
