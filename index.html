@@ -618,7 +618,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 </script>
 <script>
 (function(){
-  const APP_VERSION = "1.6.0";
+  const APP_VERSION = "1.6.1";
   const LS = "diarias-piloto-v2", LS_UI = "flight-wallet-ui", LS_OLD = "diaria-usd-ars-v1";
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -958,7 +958,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         let a = `<span class="money" style="color:var(--neg)">−${fm(e.amount,e.cur)}</span>`;
         if(e.pay==="card"){
           if(nac) a += `<small>no cartão</small>`;
-          else if(e.brl == null) a += `<small><button class="link" data-act="setbrl" data-id="${e.id}">informar BRL</button></small>`;
+          else if(e.brl == null) a += `<small><button class="link" data-act="setbrl" data-id="${e.id}">informar BRL</button> · <button class="link" data-act="fxbrl" data-id="${e.id}">buscar online</button></small>`;
           else a += `<small>${fm(e.brl*(1+(e.iofPct||0)/100),"BRL")} c/ IOF</small>`;
         }
         const how = (e.pay==="card" ? (e.deduct ? "💳 cartão · abatido" : "💳 cartão") + (e.rate ? " · cot. " + fr6(e.rate) : "") : "dinheiro") + " · " + catOf(e.cat)[1] + " " + catOf(e.cat)[2];
@@ -1550,6 +1550,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         t.exps.push({id:uid(), date:$("ex-date").value||today(), desc:$("ex-desc").value.trim(), cat, amount, cur, pay, brl, iofPct, deduct, ts:Date.now(), ...(autoRate ? {rate:autoRate} : {})});
         save(); render();
         flash("ex-h", fxFail ? "Lançada, mas sem internet para buscar a cotação: toque em “informar BRL” depois" : autoRate ? `Lançada com cotação ${fr6(autoRate)} (BRL por ${cur})` : "Despesa lançada", fxFail); break;
+      }
+      case "fxbrl": {
+        const ex = t.exps.find(x=>x.id===b.dataset.id); if(!ex) break;
+        const label = b.textContent; b.textContent = "buscando…"; b.disabled = true;
+        const r = await fxRate(ex.cur);
+        if(!r){ b.textContent = "sem internet"; setTimeout(()=>{ b.textContent = label; b.disabled = false; }, 2500); break; }
+        ex.brl = ex.amount * r; ex.rate = r; save(); render(); break;
       }
       case "setbrl": {
         const ex = t.exps.find(x=>x.id===b.dataset.id); if(!ex) break;
