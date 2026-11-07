@@ -618,7 +618,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 </script>
 <script>
 (function(){
-  const APP_VERSION = "1.5.0";
+  const APP_VERSION = "1.6.0";
   const LS = "diarias-piloto-v2", LS_UI = "flight-wallet-ui", LS_OLD = "diaria-usd-ars-v1";
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -667,6 +667,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   const fm = (n, cur) => { const s = fmN(n,cur); return (s[0]==="−" ? "−" : "") + cur + " " + s.replace("−",""); };
   const amt = (n, cur, neg) => `<span class="money ${neg && n < -0.004 ? "err" : ""}" style="color:${cv(cur)}">${fm(n,cur)}</span>`;
   const fr = n => n.toLocaleString("pt-BR",{maximumFractionDigits:4});
+  const fr6 = n => n.toLocaleString("pt-BR",{maximumFractionDigits:6});
   function parseNum(s){
     s = String(s||"").trim().replace(/\s|R\$|US\$|\$|€|£|[A-Za-z]/g,"");
     if(!s) return NaN;
@@ -864,15 +865,14 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       h += `<div class="balrow"><div>${tag(c)}<div class="det">${det.join(" · ")}</div></div>
         <div class="amt" style="color:${x.bal < -0.004 ? "var(--neg)" : cv(c)}">${fm(x.bal,c)}</div></div>`;
     });
+    if(card.n){
+      h += `<div class="balrow"><div>${tag("BRL")}<div class="det">💳 cartão de crédito${nac ? "" : ` · ${fm(card.brl,"BRL")} + IOF ${fm(card.iof,"BRL")}`}${card.pend ? ` · ${card.pend} sem valor em BRL` : ""}</div></div>
+        <div class="amt" style="color:var(--neg)">${card.total > 0 ? "−" : ""}${fm(card.total,"BRL")}</div></div>`;
+    }
     if(!nac && t.convs.length){
       const fin = tripFinal(t);
       h += `<div class="cardline">Na moeda da diária: ` + Object.keys(fin).sort(curOrder).map(c => { const s = fin[c].rec - fin[c].spent;
         return `<span class="money" style="color:${s<-0.004?"var(--neg)":"var(--pos)"}">${s<-0.004?"do bolso ":"saldo "}${fm(Math.abs(s),c)}</span>`; }).join(" · ") + `</div>`;
-    }
-    if(card.n){
-      h += `<div class="cardline">💳 Cartão: ${nac ? amt(card.brl,"BRL") :
-        `${fm(card.brl,"BRL")} + IOF ${fm(card.iof,"BRL")} = ${amt(card.total,"BRL")}`}
-        ${card.pend ? `<div class="note">${card.pend} despesa(s) sem valor em BRL informado</div>` : ""}</div>`;
     }
     h += `</section>`;
 
@@ -942,7 +942,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       <div class="seg"><label><input type="radio" name="pay" value="cash" checked>Dinheiro</label><label><input type="radio" name="pay" value="card">Cartão de crédito</label></div>
       <div class="cardbox" id="ex-cardbox" style="display:none">
         ${nac ? "" : `<label for="ex-brl" style="margin-top:0">Valor cobrado no cartão (BRL)</label>
-        <input id="ex-brl" inputmode="decimal" placeholder="pode informar depois">
+        <input id="ex-brl" inputmode="decimal" placeholder="vazio = busca a cotação online">
         <div class="hint" id="ex-iof">IOF de ${fr(S.settings.iof)}% será somado automaticamente</div>`}
         <label class="check" ${nac?'style="margin-top:0"':""}><input type="checkbox" id="ex-deduct" ${UI.deduct?"checked":""}> Abater das diárias <span class="empty" id="ex-deduct-l"></span></label>
       </div>
@@ -961,7 +961,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
           else if(e.brl == null) a += `<small><button class="link" data-act="setbrl" data-id="${e.id}">informar BRL</button></small>`;
           else a += `<small>${fm(e.brl*(1+(e.iofPct||0)/100),"BRL")} c/ IOF</small>`;
         }
-        const how = (e.pay==="card" ? (e.deduct ? "💳 cartão · abatido" : "💳 cartão") : "dinheiro") + " · " + catOf(e.cat)[1] + " " + catOf(e.cat)[2];
+        const how = (e.pay==="card" ? (e.deduct ? "💳 cartão · abatido" : "💳 cartão") + (e.rate ? " · cot. " + fr6(e.rate) : "") : "dinheiro") + " · " + catOf(e.cat)[1] + " " + catOf(e.cat)[2];
         return {type:"exps", id:e.id, date:e.date, ts:e.ts, d:e.desc||"Despesa", m:`${fdy(e.date)} · ${how}`, a};
       })
     ].sort((a,b) => (b.date||"").localeCompare(a.date||"") || b.ts - a.ts);
@@ -976,6 +976,23 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     if(sheet) h += `<div class="modal on" id="tsheet"><div class="card"><div class="shead"><h2>${sheet[0]}</h2>
       <button class="ghost" data-act="sheet" data-s="" aria-label="Fechar">✕</button></div>${sheet[1]}</div></div>`;
     return h;
+  }
+
+  // cotação online (BRL por 1 unidade da moeda), sem chave e sem IA: AwesomeAPI e, se falhar, open.er-api.com
+  const FX = {};
+  async function fxRate(cur){
+    if(cur === "BRL") return 1;
+    const c = FX[cur]; if(c && Date.now() - c.ts < 600000) return c.r;
+    const get = async (url, pick) => {
+      const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 6000);
+      try{ const r = await fetch(url, {signal:ctl.signal, cache:"no-store"}); if(!r.ok) return null;
+        const v = Number(pick(await r.json())); return v > 0 ? v : null; }
+      catch(_){ return null; } finally{ clearTimeout(to); }
+    };
+    let r = await get(`https://economia.awesomeapi.com.br/json/last/${cur}-BRL`, j => (j[cur+"BRL"]||{}).bid);
+    if(!r) r = await get(`https://open.er-api.com/v6/latest/${cur}`, j => j && j.rates && j.rates.BRL);
+    if(r) FX[cur] = {r, ts:Date.now()};
+    return r;
   }
 
   function bindTrip(){
@@ -1515,15 +1532,24 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         const pay = document.querySelector('input[name=pay]:checked').value;
         if(!(amount>0)) return flash("ex-h","Informe o valor da despesa",true);
         if(!/^[A-Z]{3}$/.test(cur)) return flash("ex-h","Moeda inválida (use 3 letras, ex: ARS)",true);
-        let brl = null, iofPct = 0, deduct = false;
+        let brl = null, iofPct = 0, deduct = false, autoRate = null, fxFail = false;
         if(pay==="card"){
           deduct = $("ex-deduct").checked; UI.deduct = deduct;
           if(nac) brl = amount;
-          else { const v = parseNum($("ex-brl").value); brl = v>0 ? v : (cur==="BRL" ? amount : null); iofPct = S.settings.iof; }
+          else {
+            let v = parseNum($("ex-brl").value);
+            if(!(v>0) && cur !== "BRL"){
+              flash("ex-h","Buscando cotação online…"); b.disabled = true;
+              const r = await fxRate(cur); b.disabled = false;
+              if(r){ autoRate = r; v = amount * r; } else fxFail = true;
+            }
+            brl = v>0 ? v : (cur==="BRL" ? amount : null); iofPct = S.settings.iof;
+          }
         }
         const cat = document.querySelector('input[name=cat]:checked')?.value || "other"; if(!nac){ t.lastCur = cur; UI.lastExpCur = cur; }
-        t.exps.push({id:uid(), date:$("ex-date").value||today(), desc:$("ex-desc").value.trim(), cat, amount, cur, pay, brl, iofPct, deduct, ts:Date.now()});
-        save(); render(); flash("ex-h","Despesa lançada"); break;
+        t.exps.push({id:uid(), date:$("ex-date").value||today(), desc:$("ex-desc").value.trim(), cat, amount, cur, pay, brl, iofPct, deduct, ts:Date.now(), ...(autoRate ? {rate:autoRate} : {})});
+        save(); render();
+        flash("ex-h", fxFail ? "Lançada, mas sem internet para buscar a cotação: toque em “informar BRL” depois" : autoRate ? `Lançada com cotação ${fr6(autoRate)} (BRL por ${cur})` : "Despesa lançada", fxFail); break;
       }
       case "setbrl": {
         const ex = t.exps.find(x=>x.id===b.dataset.id); if(!ex) break;
